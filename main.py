@@ -11,9 +11,9 @@ def main():
         credentials_path=settings.***REMOVED***
     )
 
-    # Initialize the smart scheduler agent (now using Gemini API key)
+    # Initialize the smart scheduler agent 
     agent = SmartSchedulerAgent(
-        gemini_api_key=settings.REMOVED,  # ✅ updated key
+        gemini_api_key=settings.REMOVED, 
         google_calendar_service=google_calendar_service,
         timezone=settings.DEFAULT_TIMEZONE
     )
@@ -24,4 +24,3 @@ def main():
 if __name__ == "__main__":
     print(f"🔐 Google credentials path: {settings.***REMOVED***}")
     main()
-    
