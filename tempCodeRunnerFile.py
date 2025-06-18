@@ -8,12 +8,12 @@ from agent.auth import authenticate_google_calendar  # << moved auth logic to au
 def main():
     # Authenticate with Google Calendar
     google_calendar_service = authenticate_google_calendar(
-        credentials_path=settings.***REMOVED***
+        credentials_path=settings.GOOGLE_CALENDAR_CREDENTIALS_PATH
     )
 
     # Initialize the smart scheduler agent (now using Gemini API key)
     agent = SmartSchedulerAgent(
-        gemini_api_key=settings.REMOVED,  # ✅ updated key
+        gemini_api_key=settings.GEMINI_API_KEY,  # ✅ updated key
         google_calendar_service=google_calendar_service,
         timezone=settings.DEFAULT_TIMEZONE
     )
@@ -22,6 +22,6 @@ def main():
     agent.start_conversation()
 
 if __name__ == "__main__":
-    print(f"🔐 Google credentials path: {settings.***REMOVED***}")
+    print(f"🔐 Google credentials path: {settings.GOOGLE_CALENDAR_CREDENTIALS_PATH}")
     main()
     
