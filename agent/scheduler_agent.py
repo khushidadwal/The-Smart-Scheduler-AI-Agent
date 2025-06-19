@@ -80,7 +80,7 @@ class SmartSchedulerAgent:
                     self.voice.speak("Goodbye! Have a great day!")
                     break
 
-                # ✅ Check if user selected an option
+                # Check if user selected an option
                 option_num = self.extract_option_number(user_input)
                 if option_num and self.last_suggested_slots:
                     index = option_num - 1
@@ -98,7 +98,6 @@ class SmartSchedulerAgent:
                             self.voice.speak("❌ Sorry, I wasn't able to schedule the meeting.")
                         continue  # Skip further Gemini processing
 
-                # 🧠 Process input using Gemini
                 response = self.process_user_input(user_input)
 
                 # Speak the response
@@ -120,7 +119,7 @@ class SmartSchedulerAgent:
                 self.voice.speak("Goodbye!")
                 break
             except Exception as e:
-                print(f"❌ Error in conversation: {e}")
+                print(f"Error in conversation: {e}")
                 self.voice.speak("I encountered an error. Let's try again.")
                 self.current_retries += 1
 
@@ -210,7 +209,7 @@ class SmartSchedulerAgent:
             self.state = ConversationState.HANDLING_CONFLICT
             return "Sorry, I couldn't find any open slots for that time. Would you like to try another day?"
 
-        # ✅ Store slots so user can later say "Option 1"
+        # Store slots so user can later say "Option 1"
         self.last_suggested_slots = slots
         self.state = ConversationState.SHOWING_OPTIONS
 
@@ -318,7 +317,7 @@ class SmartSchedulerAgent:
             return "Please confirm if you'd like to schedule this meeting now. You can say 'yes' or 'no'."
 
     def handle_conflict_resolution(self, user_input: str) -> str:
-        # 👇 Reprocess user's follow-up input
+        
         extracted_info = self.nlp.extract_meeting_info(user_input, {
             "current_state": self.state.value,
             "meeting_request": asdict(self.meeting_request),

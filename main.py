@@ -22,5 +22,5 @@ def main():
     agent.start_conversation()
 
 if __name__ == "__main__":
-    print(f"🔐 Google credentials path: {settings.GOOGLE_CALENDAR_CREDENTIALS_PATH}")
+    print(f"Google credentials path: {settings.GOOGLE_CALENDAR_CREDENTIALS_PATH}")
     main()

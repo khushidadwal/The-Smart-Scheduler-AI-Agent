@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 def authenticate_google_calendar(credentials_path="credentials.json", token_path="token.json"):
-    """Authenticates the Google Calendar API and returns the service client."""
+    # Authenticates the Google Calendar API
     creds = None
 
     if os.path.exists(token_path):

@@ -44,7 +44,7 @@ class VoiceHandler:
     
     def listen(self, timeout: int = 10, phrase_time_limit: int = 15) -> Optional[str]:
         """Listen for speech with improved error handling"""
-        print("🎤 Listening...")
+        print("Listening...")
         
         try:
             with self.microphone as source:
@@ -55,7 +55,7 @@ class VoiceHandler:
                     phrase_time_limit=phrase_time_limit
                 )
             
-            print("🔄 Processing speech...")
+            print("Processing speech...")
             text = self.recognizer.recognize_google(audio)
             print(f"👤 User: {text}")
             return text.lower().strip()
