@@ -98,7 +98,7 @@ python main.py
 
 ---
 
-## ✅ Example Interaction
+## - Example Interaction
 
 ```
 👤: I want to schedule a meeting.
