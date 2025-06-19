@@ -76,11 +76,11 @@ class SmartSchedulerAgent:
                     continue
                 
                 # Handle exit commands
-                if any(exit_word in user_input for exit_word in ["goodbye", "exit", "quit", "stop"]):
+                if any(exit_word in user_input for exit_word in ["goodbye", "thanks","exit", "quit", "stop"]):
                     self.voice.speak("Goodbye! Have a great day!")
                     break
 
-                # Check if user selected an option
+                # ✅ Check if user selected an option
                 option_num = self.extract_option_number(user_input)
                 if option_num and self.last_suggested_slots:
                     index = option_num - 1
@@ -98,6 +98,7 @@ class SmartSchedulerAgent:
                             self.voice.speak("❌ Sorry, I wasn't able to schedule the meeting.")
                         continue  # Skip further Gemini processing
 
+                # 🧠 Process input using Gemini
                 response = self.process_user_input(user_input)
 
                 # Speak the response
@@ -119,7 +120,7 @@ class SmartSchedulerAgent:
                 self.voice.speak("Goodbye!")
                 break
             except Exception as e:
-                print(f"Error in conversation: {e}")
+                print(f"❌ Error in conversation: {e}")
                 self.voice.speak("I encountered an error. Let's try again.")
                 self.current_retries += 1
 
@@ -143,12 +144,36 @@ class SmartSchedulerAgent:
         # Update meeting request with extracted info
         self.update_meeting_request(extracted_info)
         
-        if any(phrase in user_input.lower() for phrase in ["do i have", "what's on", "am i busy", "anything on", "my schedule", "calendar for"]):
+        if any(phrase in user_input.lower() for phrase in [
+            "do i have", "what's on", "am i busy", "anything on", "my schedule", "calendar for", "am i free", "am i available"
+        ]):
             date = self.nlp.extract_date(user_input)
             if date:
-                return self.calendar.view_events_on(date)
+                if "evening" in user_input.lower():
+                    preferred_range = {"start_hour": 17, "end_hour": 21}
+                elif "morning" in user_input.lower():
+                    preferred_range = {"start_hour": 8, "end_hour": 12}
+                elif "afternoon" in user_input.lower():
+                    preferred_range = {"start_hour": 12, "end_hour": 17}
+                else:
+                    # Default to full workday
+                    preferred_range = {"start_hour": 9, "end_hour": 17}
+
+                free_slots = self.calendar_manager.find_optimal_slots(
+                    target_date=date,
+                    duration_minutes=30,
+                    preferred_time_range=preferred_range,
+                    max_slots=5
+                )
+
+                if free_slots:
+                    slot_strings = "\n".join([f"- {slot}" for slot in free_slots])
+                    return f"✅ You are free during that time. Suggested slots:\n{slot_strings}"
+                else:
+                    return f"❌ You're likely busy during that time on {date.strftime('%A, %B %d')}."
             else:
-                return "Sure, what day should I check for you?"
+                return "I couldn't determine the date. Please try again with something like 'am I free this Friday evening?'"
+
 
         # Handle based on current state
         if self.state == ConversationState.GREETING:
@@ -202,14 +227,15 @@ class SmartSchedulerAgent:
         slots = self.calendar_manager.find_optimal_slots(
             target_date=self.meeting_request.preferred_date,
             duration_minutes=self.meeting_request.duration_minutes,
-            preferred_time_range=self.meeting_request.time_range
+            preferred_time_range=self.meeting_request.time_range,
+            max_slots=5
         )
 
         if not slots:
             self.state = ConversationState.HANDLING_CONFLICT
             return "Sorry, I couldn't find any open slots for that time. Would you like to try another day?"
 
-        # Store slots so user can later say "Option 1"
+        # ✅ Store slots so user can later say "Option 1"
         self.last_suggested_slots = slots
         self.state = ConversationState.SHOWING_OPTIONS
 
@@ -223,17 +249,19 @@ class SmartSchedulerAgent:
 
     
     def find_and_present_options(self) -> str:
-        """Find available time slots and present them to user"""
-        slots = self.calendar.find_optimal_slots(
+        slots = self.calendar_manager.find_optimal_slots(
             self.meeting_request.preferred_date,
             self.meeting_request.duration_minutes,
-            self.meeting_request.time_range
+            self.meeting_request.time_range,
+            max_slots=5
         )
-        
+
         if slots:
+            self.last_suggested_slots = slots
+        
             self.current_options = slots
             self.state = ConversationState.SHOWING_OPTIONS
-            
+
             response = f"I found {len(slots)} available time slots for your {self.meeting_request.duration_minutes}-minute meeting:\n\n"
             for i, slot in enumerate(slots, 1):
                 confidence_text = ""
@@ -241,19 +269,19 @@ class SmartSchedulerAgent:
                     confidence_text = " (Great time!)"
                 elif slot.confidence < 0.5:
                     confidence_text = " (Workable, but not ideal)"
-                
                 response += f"{i}. {slot}{confidence_text}\n"
-            
+
             response += "\nWhich option works best for you? Just say the number or describe your preference."
             return response
         else:
             self.state = ConversationState.HANDLING_CONFLICT
             return self.handle_no_slots_available()
+
     
     def handle_no_slots_available(self) -> str:
         """Handle case when no slots are available"""
         # Get alternative suggestions
-        alternatives = self.calendar.suggest_alternative_times(
+        alternatives = self.calendar_manager.suggest_alternative_times(
             self.meeting_request.preferred_date,
             self.meeting_request.duration_minutes
         )
@@ -300,7 +328,7 @@ class SmartSchedulerAgent:
         """Handle user confirming meeting selection"""
         if "yes" in user_input.lower():
             self.state = ConversationState.SCHEDULING
-            success = self.calendar.schedule_meeting(
+            success = self.calendar_manager.schedule_meeting(
                 self.selected_slot,
                 self.meeting_request.title,
                 self.meeting_request.attendees
@@ -317,7 +345,7 @@ class SmartSchedulerAgent:
             return "Please confirm if you'd like to schedule this meeting now. You can say 'yes' or 'no'."
 
     def handle_conflict_resolution(self, user_input: str) -> str:
-        
+        # 👇 Reprocess user's follow-up input
         extracted_info = self.nlp.extract_meeting_info(user_input, {
             "current_state": self.state.value,
             "meeting_request": asdict(self.meeting_request),
@@ -375,8 +403,6 @@ class SmartSchedulerAgent:
 
     def extract_option_number(self, user_input: str) -> Optional[int]:
         """Extracts option number from user speech like 'one', 'option 2', etc."""
-
-        print("🔍 extract_option_number called with input:", user_input)  # ✅ DEBUG LINE
         word_to_num = {
             "one": 1, "first": 1, "1": 1,
             "two": 2, "second": 2, "2": 2,
@@ -389,5 +415,6 @@ class SmartSchedulerAgent:
             if key in user_input:
                 return val
         return None
+    
 
 

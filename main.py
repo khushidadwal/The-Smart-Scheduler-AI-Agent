@@ -3,7 +3,7 @@
 import os
 from config import settings
 from agent import SmartSchedulerAgent
-from agent.auth import authenticate_google_calendar  # << moved auth logic to auth.py
+from agent.auth import authenticate_google_calendar
 
 def main():
     # Authenticate with Google Calendar

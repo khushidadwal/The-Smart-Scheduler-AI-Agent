@@ -44,7 +44,7 @@ class VoiceHandler:
     
     def listen(self, timeout: int = 10, phrase_time_limit: int = 15) -> Optional[str]:
         """Listen for speech with improved error handling"""
-        print("Listening...")
+        print(" Listening...")
         
         try:
             with self.microphone as source:

@@ -42,6 +42,7 @@ class NLPProcessor:
                 except Exception:
                     raise ValueError("Gemini returned no usable content.")
 
+            # ✅ Clean markdown-wrapped JSON
             cleaned = re.sub(r"^```json|```$", "", content.strip(), flags=re.MULTILINE).strip()
 
             # Parse and return as dict

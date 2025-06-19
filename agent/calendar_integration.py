@@ -23,7 +23,7 @@ class CalendarEvent:
 class TimeSlot:
     start_time: datetime
     end_time: datetime
-    confidence: float = 1.0
+    confidence: float = 1.0  # How confident we are this slot is good
     
     def __str__(self):
         return f"{self.start_time.strftime('%A, %B %d at %I:%M %p')} - {self.end_time.strftime('%I:%M %p')}"
@@ -38,6 +38,7 @@ class AdvancedCalendarManager:
         
     def get_events_for_date_range(self, start_date: datetime.date, 
                                  end_date: datetime.date) -> List[CalendarEvent]:
+        """Get all events in a date range"""
         start_datetime = datetime.combine(start_date, time.min)
         end_datetime = datetime.combine(end_date, time.max)
         start_utc = self.timezone.localize(start_datetime).astimezone(pytz.UTC)
@@ -56,7 +57,8 @@ class AdvancedCalendarManager:
             for event in events_result.get('items', []):
                 start_str = event['start'].get('dateTime', event['start'].get('date'))
                 end_str = event['end'].get('dateTime', event['end'].get('date'))
-            
+                
+                # Parse times
                 start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
                 end_time = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
                 
@@ -80,7 +82,8 @@ class AdvancedCalendarManager:
     
     def find_optimal_slots(self, target_date: datetime.date, duration_minutes: int,
                           preferred_time_range: Optional[Tuple[int, int]] = None,
-                          max_slots: int = 3) -> List[TimeSlot]:
+                          max_slots: int = 5) -> List[TimeSlot]:
+        """Find optimal meeting slots with confidence scoring"""
         
         # Default working hours
         work_start = 9  # 9 AM
@@ -91,6 +94,7 @@ class AdvancedCalendarManager:
         # Get existing events
         events = self.get_events_for_date_range(target_date, target_date)
         
+        # Create time slots
         slots = []
 
         if preferred_time_range:
@@ -122,6 +126,12 @@ class AdvancedCalendarManager:
         end_of_day = self.timezone.localize(end_of_day)
 
         
+        
+        # current_time = datetime.combine(target_date, time(work_start, 0))
+        # current_time = self.timezone.localize(current_time)
+
+        # end_of_day = datetime.combine(target_date, time(work_end, 0))
+        # end_of_day = self.timezone.localize(end_of_day)
         
         # Sort events by start time
         events.sort(key=lambda e: e.start_time)
@@ -208,16 +218,16 @@ class AdvancedCalendarManager:
                 sendUpdates='all' if attendees else 'none'
             ).execute()
             
-            print(f"Meeting scheduled: {event.get('htmlLink')}")
+            print(f"✅ Meeting scheduled: {event.get('htmlLink')}")
             return True
             
         except HttpError as error:
-            print(f"Failed to schedule meeting: {error}")
+            print(f"❌ Failed to schedule meeting: {error}")
             return False
     
     def suggest_alternative_times(self, original_date: datetime.date, 
                                  duration_minutes: int) -> List[TimeSlot]:
-        # Suggest alternative times when preferred slot is unavailable
+        """Suggest alternative times when preferred slot is unavailable"""
         alternatives = []
         
         # Try next few days
@@ -228,7 +238,7 @@ class AdvancedCalendarManager:
             if alt_date.weekday() >= 5 and original_date.weekday() < 5:
                 continue
             
-            slots = self.find_optimal_slots(alt_date, duration_minutes, max_slots=2)
+            slots = self.find_optimal_slots(alt_date, duration_minutes, max_slots=5)
             alternatives.extend(slots)
             
             if len(alternatives) >= 5:  # Return up to 5 alternatives
